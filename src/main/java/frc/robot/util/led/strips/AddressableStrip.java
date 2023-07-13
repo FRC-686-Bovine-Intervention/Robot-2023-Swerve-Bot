@@ -1,9 +1,12 @@
-package frc.robot.util.led;
+package frc.robot.util.led.strips;
 
 import edu.wpi.first.wpilibj.AddressableLED;
 import edu.wpi.first.wpilibj.AddressableLEDBuffer;
+import frc.robot.util.led.LEDColor;
+import frc.robot.util.led.LEDColor.RawLEDColor;
+import frc.robot.util.led.strips.LEDStrip.HardwareStrip;
 
-public class AddressableStrip implements LEDStrip {
+public class AddressableStrip implements HardwareStrip {
     private final AddressableLED strip;
     private final AddressableLEDBuffer buffer;
 
@@ -21,10 +24,11 @@ public class AddressableStrip implements LEDStrip {
     }
 
     @Override
-    public void setLED(int ledIndex, int r, int g, int b, int w) {
-        buffer.setRGB(ledIndex, r, g, b);
+    public void setLED(int ledIndex, RawLEDColor color) {
+        buffer.setRGB(ledIndex, color.r, color.g, color.b);
     }
 
+    @Override
     public void refresh() {
         strip.setData(buffer);
     }

@@ -4,19 +4,29 @@
 
 package frc.robot;
 
+import java.util.Arrays;
+import java.util.Optional;
+
 import org.littletonrobotics.junction.LoggedRobot;
 
 import com.ctre.phoenix.led.CANdle;
 
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import frc.robot.util.led.LEDColor.RGBColor;
+import frc.robot.util.Event;
+import frc.robot.util.led.LEDColor;
+import frc.robot.util.led.animation.BarAnimation;
+import frc.robot.util.led.animation.BarAnimation.BarData;
 import frc.robot.util.led.animation.EndgameNotificationAnim;
-import frc.robot.util.led.animation.GradientAnimation;
-import frc.robot.util.led.animation.LEDAnimation.StripCounterAnimation;
-import frc.robot.util.led.functions.Gradient;
+import frc.robot.util.led.animation.FlashingAnimation;
 import frc.robot.util.led.animation.LEDManager;
+import frc.robot.util.led.animation.ScrollingAnimation;
+import frc.robot.util.led.functions.Gradient;
+import frc.robot.util.led.functions.Gradient.BasicGradient;
+import frc.robot.util.led.functions.Gradient.BasicGradient.InterpolationStyle;
+import frc.robot.util.led.functions.TilingFunction;
 import frc.robot.util.led.strips.CANdleStrip;
 import frc.robot.util.led.strips.LEDStrip.SoftwareStrip;
 
@@ -33,20 +43,16 @@ public class Robot extends LoggedRobot {
   private SoftwareStrip offboardLEDs = candleStrip.getOffboardLEDs();
   private SoftwareStrip offboardStrip1 = offboardLEDs.substrip(0, 60);
   private SoftwareStrip offboardStrip2 = offboardLEDs.substrip(60);
-  // private RainbowAnimation rainbowAnimation = new RainbowAnimation(offboardStrip2).setWavelength(1).setVelocity(1);
-  // private RainbowAnimation rainbowAnimation1 = new RainbowAnimation(onboardStrip1, onboardStrip2).setWavelength(1).setVelocity(0.1);
-  private StripCounterAnimation offboardCounter = new StripCounterAnimation(offboardLEDs);
-  private GradientAnimation offboardGradient = new GradientAnimation(
-    Gradient.hueShift, 
-    offboardStrip2.reverse()
-  ).setWavelength(5);
 
-  private GradientAnimation offboardGradient1 = new GradientAnimation(
-    Gradient.rainbow, 
-    offboardStrip1
-  ).setWavelength(5);
-
-  private EndgameNotificationAnim endgameNotificationAnim = new EndgameNotificationAnim(offboardStrip2, onboardLEDs);
+  private FlashingAnimation disabledAnimation = new FlashingAnimation(new BasicGradient(InterpolationStyle.Linear, LEDColor.Black, LEDColor.Red), TilingFunction.Sinusoidal, candleStrip).setPeriod(2);
+  private ScrollingAnimation autoAnimation = new ScrollingAnimation(new BasicGradient(InterpolationStyle.Step, LEDColor.Blue, LEDColor.Yellow), TilingFunction.Modulo, offboardLEDs).setWavelength(5);
+  private BarAnimation autoEndAnimation = new BarAnimation(
+    () -> Arrays.asList(new BarData(LEDColor.Green, 5.0)), 
+    Optional.of(LEDColor.Black), 
+    offboardLEDs
+  );
+  private ScrollingAnimation teleAnimation = new ScrollingAnimation(Gradient.rainbow, TilingFunction.Modulo, offboardLEDs).setWavelength(5);
+  private EndgameNotificationAnim endgameNotificationAnim = new EndgameNotificationAnim(offboardStrip2);
 
   private LEDManager ledManager = LEDManager.getInstance();
 
@@ -65,13 +71,17 @@ public class Robot extends LoggedRobot {
   }
 
   @Override
-  public void disabledInit() {}
+  public void disabledInit() {
+    disabledAnimation.start();
+  }
 
   @Override
   public void disabledPeriodic() {}
 
   @Override
-  public void disabledExit() {}
+  public void disabledExit() {
+    disabledAnimation.stop();
+  }
 
   @Override
   public void autonomousInit() {
@@ -80,25 +90,27 @@ public class Robot extends LoggedRobot {
     if (m_autonomousCommand != null) {
       m_autonomousCommand.schedule();
     }
+    autoAnimation.start();
   }
 
   @Override
   public void autonomousPeriodic() {}
 
   @Override
-  public void autonomousExit() {}
+  public void autonomousExit() {
+    autoAnimation.stop();
+  }
 
   @Override
   public void teleopInit() {
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();
     }
+    teleAnimation.start();
   }
 
   @Override
   public void teleopPeriodic() {
-    offboardGradient.start();
-    offboardGradient1.start();
     if(DriverStation.getMatchTime() <= 30 && DriverStation.getMatchTime() >= 29.5) {
       endgameNotificationAnim.start();
     }
@@ -109,10 +121,7 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void teleopExit() {
-    onboardLEDs.foreach((int i) -> {
-      onboardLEDs.setLED(i, new RGBColor(1.0, 0.0, 0.0));
-    });
-    offboardGradient.pause();
+    teleAnimation.stop();
   }
 
   @Override

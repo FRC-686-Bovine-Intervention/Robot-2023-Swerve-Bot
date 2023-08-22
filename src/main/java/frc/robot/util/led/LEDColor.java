@@ -2,8 +2,12 @@ package frc.robot.util.led;
 
 import edu.wpi.first.math.MathUtil;
 import frc.robot.util.InterpolationFunction;
+import frc.robot.util.led.functions.Gradient;
 
-public interface LEDColor {
+public interface LEDColor extends Gradient {
+   @Override
+   public default LEDColor getColor(double x) {return this;}
+
    public static final RGBColor Red =     new RGBColor(255,   0,   0);
    public static final RGBColor Yellow =  new RGBColor(255, 255,   0);
    public static final RGBColor Green =   new RGBColor(  0, 255,   0);
